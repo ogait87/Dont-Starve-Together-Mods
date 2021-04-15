@@ -1,7 +1,7 @@
 name = "Lureplant Farm Helper"
 description = "Helps creating farms that use lureplants"
 author = "ogait87"
-version = "0.1.0"
+version = "0.1.1"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
