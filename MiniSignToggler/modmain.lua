@@ -3,7 +3,15 @@ local toggle_key = GetModConfigData("toggle_key"):lower():byte()
 local minisigns = {}
 local hidesigns = false
 
+local function InGame()
+    return GLOBAL.ThePlayer and GLOBAL.ThePlayer.HUD and not GLOBAL.ThePlayer.HUD:HasInputFocus()
+end
+
 GLOBAL.TheInput:AddKeyDownHandler(toggle_key, function()
+    if not InGame() then
+        return
+    end
+
     hidesigns = not hidesigns
 
     --set all minisigns to either hide/show

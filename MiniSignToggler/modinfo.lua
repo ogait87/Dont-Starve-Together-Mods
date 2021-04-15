@@ -1,7 +1,7 @@
 name = "Mini Sign Toggler"
 description = "Toggle display of mini signs in the game"
 author = "ogait87 & zarklord"
-version = "0.1.4"
+version = "0.1.5"
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"
