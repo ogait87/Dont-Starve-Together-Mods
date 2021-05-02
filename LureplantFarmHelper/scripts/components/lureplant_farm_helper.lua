@@ -21,6 +21,8 @@ local VALID_TILES = {
     [GROUND.DECIDUOUS] = true,
 }
 
+local nonEyeplantBlockingPrefabs = {"NOBLOCK","DECOR","FX","INLIMBO","NOCLICK","player"}
+
 local function generateNumbers()
     local list = {}
 
@@ -37,6 +39,7 @@ local LureplantFarmHelper = Class(function(self, inst)
     self.inst = inst
     self.display_state = false
     self.lureplants = {}
+    self.highlights = {}
     self.n_active_lureplants = 0
     self.refresh_timer_active = false
     self:generateAvailableNumbers()
@@ -46,15 +49,19 @@ function LureplantFarmHelper:AddLureplant(lureplant)
     self.lureplants[lureplant] = {}
     self.lureplants[lureplant]["Visible"] = false
     self.lureplants[lureplant]["Number"] = nil
+    self.lureplants[lureplant]['Highlights'] = {}
 
     self.inst:DoTaskInTime(0.2, function()
         if self.display_state == true then
             self:DisplayLureplant(lureplant)
+            self:RefreshLureplant(lureplant)
+            self:RefreshHighlightList()
         end
     end)
 
     lureplant:ListenForEvent("onremove", function()
         self:HideLureplant(lureplant)
+        self:RefreshHighlightList()
         self.lureplants[lureplant] = nil
     end)
 end
@@ -104,7 +111,6 @@ function LureplantFarmHelper:DisplayLureplant(lureplant)
         end
     end
 
-    self:RefreshLureplant(lureplant)
     self:TryStartingRefreshTimer()
 end
 
@@ -112,6 +118,8 @@ function LureplantFarmHelper:HideLureplant(lureplant)
     if self.lureplants[lureplant]["Visible"] == false then
         return
     end
+
+    self.lureplants[lureplant]["Highlights"] = {}
 
     if self.lureplants[lureplant]["Position"] then
         self.lureplants[lureplant]["Position"]:Remove()
@@ -139,13 +147,16 @@ function LureplantFarmHelper:RefreshLureplants()
 end
 
 function LureplantFarmHelper:RefreshLureplant(lureplant)
+    local highlights = {}
+
     if self.lureplants[lureplant]["Visible"] == true then
         local amount = 0
 
         for i, locator in ipairs(self.lureplants[lureplant]["Locators"]) do
             local x, y, z = locator.Transform:GetWorldPosition()
             local isGroundCompatible = self:isValidTile(TheWorld.Map:GetTileAtPoint(x, y, z))
-            local isPrefabColliding = #TheSim:FindEntities(x, y, z, 1, nil, {"NOBLOCK"}) > 0
+            local collidingPrefabs = TheSim:FindEntities(x, y, z, 1, nil, nonEyeplantBlockingPrefabs)
+            local isPrefabColliding = #collidingPrefabs > 0
 
             if not isGroundCompatible then
                 locator.setMode("position")
@@ -153,6 +164,9 @@ function LureplantFarmHelper:RefreshLureplant(lureplant)
             elseif isPrefabColliding then
                 locator.setMode("blocked")
                 locator.AnimState:SetSortOrder(1)
+                for _, item in ipairs(collidingPrefabs) do
+                    highlights[item] = true
+                end
             elseif amount < MAX_MINIONS then
                 locator.setMode("selected")
                 locator.AnimState:SetSortOrder(3)
@@ -163,6 +177,44 @@ function LureplantFarmHelper:RefreshLureplant(lureplant)
             end
         end
     end
+
+    self.lureplants[lureplant]["Highlights"] = highlights
+end
+
+function LureplantFarmHelper:RefreshHighlightList()
+    local old_highlights = self.highlights
+    local new_highlights = {}
+    local target_highlights = {}
+
+    for lureplant in pairs(self.lureplants) do
+        for item in pairs(self.lureplants[lureplant]["Highlights"]) do
+            target_highlights[item] = true
+        end
+    end
+
+    for item in pairs(target_highlights) do
+        if old_highlights[item] == nil then
+            if not item.components.highlight then
+                item:AddComponent("highlight")
+            end
+
+            local highlight = item.components.highlight
+            highlight.highlight_add_colour_red = nil
+            highlight.highlight_add_colour_green = nil
+            highlight.highlight_add_colour_blue = nil
+            highlight:SetAddColour({x = 0.5, y = 0.5, z = 0.5})
+            highlight.highlit = true
+        end
+        new_highlights[item] = true
+    end
+
+    for item in pairs(old_highlights) do
+        if new_highlights[item] == nil and item.components.highlight then
+            item.components.highlight:UnHighlight()
+        end
+    end
+
+    self.highlights = new_highlights
 end
 
 function LureplantFarmHelper:ToggleDisplayMode()
@@ -179,6 +231,9 @@ function LureplantFarmHelper:ToggleDisplayMode()
             self:HideLureplant(lureplant)
         end
     end
+
+    self:RefreshLureplants()
+    self:RefreshHighlightList()
 end
 
 function LureplantFarmHelper:ToggleDisplayLureplant(lureplant)
@@ -187,6 +242,9 @@ function LureplantFarmHelper:ToggleDisplayLureplant(lureplant)
     else
         self:DisplayLureplant(lureplant)
     end
+
+    self:RefreshLureplant(lureplant)
+    self:RefreshHighlightList()
 end
 
 function LureplantFarmHelper:TryStartingRefreshTimer()
@@ -194,7 +252,7 @@ function LureplantFarmHelper:TryStartingRefreshTimer()
         return
     end
 
-    if self.n_active_lureplants == 0 then
+    if self.n_active_lureplants == 0 and #self.highlights == 0 then
         return
     end
 
@@ -203,6 +261,7 @@ function LureplantFarmHelper:TryStartingRefreshTimer()
     self.inst:DoTaskInTime(0.5, function()
         self.refresh_timer_active = false
         self:RefreshLureplants()
+        self:RefreshHighlightList()
         self:TryStartingRefreshTimer()
     end)
 end
