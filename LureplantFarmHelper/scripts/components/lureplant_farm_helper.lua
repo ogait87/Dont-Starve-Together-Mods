@@ -152,7 +152,7 @@ function LureplantFarmHelper:RefreshLureplant(lureplant)
     if self.lureplants[lureplant]["Visible"] == true then
         local amount = 0
 
-        for i, locator in ipairs(self.lureplants[lureplant]["Locators"]) do
+        for i, locator in pairs(self.lureplants[lureplant]["Locators"]) do
             local x, y, z = locator.Transform:GetWorldPosition()
             local isGroundCompatible = self:isValidTile(TheWorld.Map:GetTileAtPoint(x, y, z))
             local collidingPrefabs = TheSim:FindEntities(x, y, z, 1, nil, nonEyeplantBlockingPrefabs)
@@ -164,7 +164,7 @@ function LureplantFarmHelper:RefreshLureplant(lureplant)
             elseif isPrefabColliding then
                 locator.setMode("blocked")
                 locator.AnimState:SetSortOrder(1)
-                for _, item in ipairs(collidingPrefabs) do
+                for _, item in pairs(collidingPrefabs) do
                     highlights[item] = true
                 end
             elseif amount < MAX_MINIONS then
@@ -268,13 +268,13 @@ end
 
 function LureplantFarmHelper:generateAvailableNumbers()
     self.available_numbers = {}
-    for i, v in ipairs(NUMBERS) do
+    for i, v in pairs(NUMBERS) do
         table.insert(self.available_numbers, v)
     end
 end
 
 function LureplantFarmHelper:getNextAvailableNumber()
-    for i, v in ipairs(self.available_numbers) do
+    for i, v in pairs(self.available_numbers) do
         table.remove(self.available_numbers, i)
         return v
     end
