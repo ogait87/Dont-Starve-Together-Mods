@@ -126,7 +126,7 @@ function LureplantFarmHelper:HideLureplant(lureplant)
         self.lureplants[lureplant]["Position"] = nil
     end
 
-    for i, locator in ipairs(self.lureplants[lureplant]["Locators"]) do
+    for i, locator in pairs(self.lureplants[lureplant]["Locators"]) do
         locator:Remove()
     end
     self.lureplants[lureplant]["Locators"] = {}
